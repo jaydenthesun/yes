@@ -1,3 +1,4 @@
+// TypeScript (React/Next.js)
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -52,48 +53,51 @@ function getPriorityColor(priority: Priority) {
 function getLevel(xp: number) {
   return Math.floor(xp / 100) + 1;
 }
-function getXPForNextLevel(xp: number) {
-  return 100 - (xp % 100);
-}
 function uuid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-// --- Local Storage Helpers ---
-function load<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const val = localStorage.getItem(key);
-    return val ? JSON.parse(val) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function save<T>(key: string, value: T) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
+  // Only generate on client
+  return (
+    Math.random().toString(36).slice(2) +
+    Date.now().toString(36)
+  );
 }
 
 // --- Main Component ---
 export default function HomePage() {
   // --- State ---
-  const [username, setUsername] = useState(() => load("username", "User-XXXX"));
+  const [username, setUsername] = useState("User-XXXX");
   const [editingUsername, setEditingUsername] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>(() => load("tasks", []));
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<Priority>("Low");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [xp, setXP] = useState(() => load("xp", 0));
-  const [xpHistory, setXPHistory] = useState<XPHistoryItem[]>(() => load("xpHistory", []));
+  const [xp, setXP] = useState(0);
+  const [xpHistory, setXPHistory] = useState<XPHistoryItem[]>([]);
   const [showXPModal, setShowXPModal] = useState(false);
   const [showMsg, setShowMsg] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // --- Load from Local Storage on Client ---
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUsername(localStorage.getItem("username") || "User-XXXX");
+      setTasks(JSON.parse(localStorage.getItem("tasks") || "[]"));
+      setXP(Number(localStorage.getItem("xp") || "0"));
+      setXPHistory(JSON.parse(localStorage.getItem("xpHistory") || "[]"));
+    }
+  }, []);
 
   // --- Persist to Local Storage ---
-  useEffect(() => { save("tasks", tasks); }, [tasks]);
-  useEffect(() => { save("xp", xp); }, [xp]);
-  useEffect(() => { save("xpHistory", xpHistory); }, [xpHistory]);
-  useEffect(() => { save("username", username); }, [username]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("tasks", JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("xp", xp.toString()); }, [xp]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("xpHistory", JSON.stringify(xpHistory)); }, [xpHistory]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("username", username); }, [username]);
+
+  // --- Startup Transition ---
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
 
   // --- Handlers ---
   function handleAddTask() {
@@ -146,6 +150,10 @@ export default function HomePage() {
     setEditingUsername(false);
     setShowMsg({ type: "success", msg: "Username updated!" });
   }
+  function handleDeleteXPHistory() {
+    setXPHistory([]);
+    setShowMsg({ type: "success", msg: "XP history deleted." });
+  }
 
   // --- Sorting ---
   const sortedTasks = [...tasks]
@@ -159,17 +167,24 @@ export default function HomePage() {
 
   // --- Render ---
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className={clsx(
+      "min-h-screen bg-gray-100 p-4 transition-opacity duration-700",
+      loading ? "opacity-0" : "opacity-100"
+    )}>
       {/* Header */}
-      <div className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+      <div className={clsx(
+        "bg-white rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between mb-6",
+        "transition-all duration-700",
+        loading ? "translate-y-8 opacity-0" : "translate-y-0 opacity-100"
+      )}>
         <div>
           <h1 className="text-3xl font-bold text-violet-600">Gamified To-Do</h1>
         </div>
         <div className="flex items-center gap-4 mt-4 md:mt-0">
-          <FaUser className="text-xl" />
+          <FaUser className="text-xl transition-transform duration-300 hover:scale-110" />
           {editingUsername ? (
             <input
-              className="border rounded px-2 py-1"
+              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg"
               value={username}
               onChange={e => setUsername(e.target.value)}
               onBlur={() => handleUsernameChange(username)}
@@ -178,12 +193,12 @@ export default function HomePage() {
             />
           ) : (
             <span
-              className="font-semibold cursor-pointer hover:underline"
+              className="font-semibold cursor-pointer hover:underline transition-colors duration-300"
               onClick={() => setEditingUsername(true)}
               title="Edit username"
             >
               {username}
-              <FaEdit className="inline ml-1 text-gray-400" />
+              <FaEdit className="inline ml-1 text-gray-400 transition-transform duration-300 hover:scale-110" />
             </span>
           )}
           <span className="ml-2 text-gray-500">
@@ -193,16 +208,19 @@ export default function HomePage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className={clsx(
+        "flex flex-col lg:flex-row gap-6 transition-all duration-700",
+        loading ? "translate-y-8 opacity-0" : "translate-y-0 opacity-100"
+      )}>
         {/* Left: Tasks */}
         <div className="flex-1 bg-white rounded-xl shadow p-6">
           <div className="flex items-center mb-4">
-            <FaCheckCircle className="text-green-500 mr-2" />
+            <FaCheckCircle className="text-green-500 mr-2 transition-transform duration-300 hover:scale-110" />
             <h2 className="text-xl font-bold">Your Tasks</h2>
           </div>
           <div className="flex flex-col md:flex-row gap-2 mb-4">
             <input
-              className="border rounded px-2 py-1 flex-1"
+              className="border rounded px-2 py-1 flex-1 transition-shadow duration-300 focus:shadow-lg"
               placeholder="Add a new task..."
               value={taskInput}
               onChange={e => setTaskInput(e.target.value)}
@@ -210,12 +228,12 @@ export default function HomePage() {
             />
             <input
               type="date"
-              className="border rounded px-2 py-1"
+              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
             />
             <select
-              className="border rounded px-2 py-1"
+              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg"
               value={priority}
               onChange={e => setPriority(e.target.value as Priority)}
             >
@@ -224,7 +242,7 @@ export default function HomePage() {
               <option value="High">High Priority</option>
             </select>
             <button
-              className="bg-violet-600 text-white px-4 py-2 rounded font-semibold hover:bg-violet-700 transition"
+              className="bg-violet-600 text-white px-4 py-2 rounded font-semibold hover:bg-violet-700 transition-all duration-300 active:scale-95"
               onClick={handleAddTask}
             >
               + Add Task
@@ -238,7 +256,7 @@ export default function HomePage() {
                 <li
                   key={task.id}
                   className={clsx(
-                    "flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-4 shadow-sm border-l-4 cursor-pointer transition hover:bg-gray-100",
+                    "flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-4 shadow-sm border-l-4 cursor-pointer transition-all duration-300 hover:bg-gray-100",
                     getPriorityColor(task.priority),
                     task.completed && "opacity-60"
                   )}
@@ -260,7 +278,7 @@ export default function HomePage() {
                   <div className="flex gap-2">
                     {!task.completed && (
                       <button
-                        className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                        className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-all duration-300 active:scale-95"
                         onClick={e => {
                           e.stopPropagation();
                           handleCompleteTask(task);
@@ -270,7 +288,7 @@ export default function HomePage() {
                       </button>
                     )}
                     <button
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-all duration-300 active:scale-95"
                       onClick={e => {
                         e.stopPropagation();
                         handleDeleteTask(task);
@@ -288,7 +306,7 @@ export default function HomePage() {
         {/* Right: Widgets */}
         <div className="flex flex-col gap-6 w-full lg:w-[350px]">
           {/* Progress */}
-          <div className="bg-white rounded-xl shadow p-4">
+          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-yellow-500">🏅</span>
               <span className="font-bold">Progress</span>
@@ -297,7 +315,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2 mb-1">
               <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
                 <div
-                  className="bg-yellow-400 h-3 rounded"
+                  className="bg-yellow-400 h-3 rounded transition-all duration-700"
                   style={{ width: `${((xp % 100) / 100) * 100}%` }}
                 />
               </div>
@@ -309,7 +327,7 @@ export default function HomePage() {
           </div>
 
           {/* Upcoming Tasks */}
-          <div className="bg-white rounded-xl shadow p-4">
+          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-blue-500">📝</span>
               <span className="font-bold">Upcoming Tasks ({sortedTasks.filter(t => !t.completed).length})</span>
@@ -331,7 +349,7 @@ export default function HomePage() {
           </div>
 
           {/* XP History */}
-          <div className="bg-white rounded-xl shadow p-4">
+          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-green-500">⏱️</span>
               <span className="font-bold">XP History</span>
@@ -345,7 +363,7 @@ export default function HomePage() {
               ))}
             </ul>
             <button
-              className="text-violet-600 text-xs underline"
+              className="text-violet-600 text-xs underline transition-colors duration-300 hover:text-violet-800"
               onClick={() => setShowXPModal(true)}
             >
               View All History
@@ -353,16 +371,16 @@ export default function HomePage() {
           </div>
 
           {/* Rewards */}
-          <div className="bg-white rounded-xl shadow p-4">
+          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
             <div className="flex items-center gap-2 mb-2">
-              <FaGift className="text-violet-500" />
+              <FaGift className="text-violet-500 transition-transform duration-300 hover:scale-110" />
               <span className="font-bold">Rewards</span>
             </div>
             <ul>
               {REWARDS.map(reward => (
                 <li
                   key={reward.id}
-                  className="flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-3"
+                  className="flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-3 transition-all duration-300 hover:bg-gray-100"
                 >
                   <div>
                     <div className="font-semibold flex items-center gap-2">
@@ -373,7 +391,7 @@ export default function HomePage() {
                   </div>
                   <button
                     className={clsx(
-                      "px-4 py-2 rounded font-semibold text-white transition",
+                      "px-4 py-2 rounded font-semibold text-white transition-all duration-300 active:scale-95",
                       xp >= reward.cost
                         ? "bg-violet-400 hover:bg-violet-500"
                         : "bg-gray-400 cursor-not-allowed"
@@ -406,12 +424,18 @@ export default function HomePage() {
         <Modal onClose={() => setShowXPModal(false)}>
           <div className="max-w-lg mx-auto">
             <h2 className="text-xl font-bold mb-4">XP History</h2>
+            <button
+              className="bg-red-500 text-white px-3 py-1 rounded mb-4 transition-all duration-300 active:scale-95"
+              onClick={handleDeleteXPHistory}
+            >
+              Delete All History
+            </button>
             <ul className="max-h-96 overflow-y-auto">
               {xpHistory.map(item => (
                 <li
                   key={item.id}
                   className={clsx(
-                    "mb-2 p-2 rounded",
+                    "mb-2 p-2 rounded transition-all duration-300",
                     item.change > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
                   )}
                 >
@@ -420,7 +444,8 @@ export default function HomePage() {
                     <span className="ml-2">{item.description}</span>
                   </div>
                   <div className="text-xs text-gray-400">
-                    {new Date(item.timestamp).toLocaleString()}
+                    {/* Use ISO string for deterministic rendering */}
+                    {new Date(item.timestamp).toISOString()}
                   </div>
                 </li>
               ))}
@@ -435,7 +460,7 @@ export default function HomePage() {
           <div className="p-4">
             <div
               className={clsx(
-                "font-bold mb-2",
+                "font-bold mb-2 transition-colors duration-300",
                 showMsg.type === "success" ? "text-green-600" : "text-red-600"
               )}
             >
@@ -449,13 +474,44 @@ export default function HomePage() {
   );
 }
 
+// --- Modal Component ---
+function Modal({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-xl shadow-lg p-6 relative min-w-[300px] max-w-full">
+        <button
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors duration-300"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <AiOutlineClose className="text-xl" />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // --- Task Modal ---
 function TaskModal({
   task,
   onClose,
   onSave,
   onComplete,
-  onDelete,
 }: {
   task: Task;
   onClose: () => void;
@@ -474,24 +530,24 @@ function TaskModal({
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Task Details</h2>
           <button onClick={onClose}>
-            <AiOutlineClose className="text-xl" />
+            <AiOutlineClose className="text-xl transition-transform duration-300 hover:scale-110" />
           </button>
         </div>
         {edit ? (
           <>
             <input
-              className="border rounded px-2 py-1 w-full mb-2"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={text}
               onChange={e => setText(e.target.value)}
             />
             <input
               type="date"
-              className="border rounded px-2 py-1 w-full mb-2"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
             />
             <select
-              className="border rounded px-2 py-1 w-full mb-2"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={priority}
               onChange={e => setPriority(e.target.value as Priority)}
             >
@@ -500,7 +556,7 @@ function TaskModal({
               <option value="High">High Priority</option>
             </select>
             <button
-              className="bg-violet-600 text-white px-4 py-2 rounded font-semibold hover:bg-violet-700 mr-2"
+              className="bg-violet-600 text-white px-4 py-2 rounded font-semibold hover:bg-violet-700 mr-2 transition-all duration-300 active:scale-95"
               onClick={() => {
                 onSave({ ...task, text, dueDate, priority });
                 setEdit(false);
@@ -509,7 +565,7 @@ function TaskModal({
               Save
             </button>
             <button
-              className="bg-gray-300 px-4 py-2 rounded"
+              className="bg-gray-300 px-4 py-2 rounded transition-all duration-300 active:scale-95"
               onClick={() => setEdit(false)}
             >
               Cancel
@@ -529,55 +585,22 @@ function TaskModal({
             <div className="flex gap-2 mt-4">
               {!task.completed && (
                 <button
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-all duration-300 active:scale-95"
                   onClick={() => onComplete(task)}
                 >
                   Mark Complete
                 </button>
               )}
               <button
-                className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700"
+                className="bg-violet-600 text-white px-4 py-2 rounded hover:bg-violet-700 transition-all duration-300 active:scale-95"
                 onClick={() => setEdit(true)}
               >
                 Edit
-              </button>
-              <button
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                onClick={() => {
-                  onDelete(task);
-                  onClose();
-                }}
-              >
-                Delete
               </button>
             </div>
           </>
         )}
       </div>
     </Modal>
-  );
-}
-
-// --- Generic Modal ---
-function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg p-6 relative animate-fadeIn">
-        <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-        >
-          <AiOutlineClose className="text-xl" />
-        </button>
-        {children}
-      </div>
-    </div>
   );
 }

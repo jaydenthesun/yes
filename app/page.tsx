@@ -75,14 +75,15 @@ type UserStats = {
   currentStreak: number;
   lastStreakCheckDate: string;
 };
-// FIX: Updated Achievement type to include currentXP in check function signature
+// Updated Achievement type to include currentXP in check function signature
 type Achievement = {
   id: string;
   name: string;
   description: string;
   icon: string;
   unlocked: boolean;
-  check: (userStats: UserStats) => boolean; // Function to check if unlocked
+  // All check functions will now accept both userStats and currentXP
+  check: (userStats: UserStats, currentXP: number) => boolean;
 };
 type Theme = "default" | "dark" | "blue" | "green"; // Example themes
 
@@ -100,7 +101,7 @@ const REWARDS: Reward[] = [
   { id: "gaming", name: "Gaming Credit ($20)", emoji: "🎮", cost: 1200, link: "https://www.xbox.com/en-us/play" },
 ];
 
-// FIX: Corrected the check function signature and used explicit types for parameters
+// Corrected the check function signature for all achievements
 const ACHIEVEMENTS: Achievement[] = [
   {
     id: "first_task",
@@ -108,7 +109,8 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete your very first task.",
     icon: "✨",
     unlocked: false,
-    check: (stats: UserStats) => stats.totalTasksCompleted >= 1,
+    // Now accepts currentXP, even if not directly used
+    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 1,
   },
   {
     id: "task_master_10",
@@ -116,7 +118,8 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete 10 tasks.",
     icon: "💪",
     unlocked: false,
-    check: (stats: UserStats) => stats.totalTasksCompleted >= 10,
+    // Now accepts currentXP, even if not directly used
+    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 10,
   },
   {
     id: "streak_3",
@@ -124,7 +127,8 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Maintain a 3-day completion streak.",
     icon: "🔥",
     unlocked: false,
-    check: (stats: UserStats) => stats.highestStreak >= 3,
+    // Now accepts currentXP, even if not directly used
+    check: (stats: UserStats, currentXP: number) => stats.highestStreak >= 3,
   },
   {
     id: "xp_collector_500",
@@ -132,7 +136,8 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Earn 500 total XP.",
     icon: "💰",
     unlocked: false,
-    check: (stats: UserStats) => stats.totalTasksCompleted * XP_PER_TASK >= 500,
+    // This one correctly uses currentXP
+    check: (stats: UserStats, currentXP: number) => currentXP >= 500,
   },
 ];
 
@@ -269,25 +274,25 @@ function TaskModal({
         {edit ? (
           <>
             <input
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={text}
               onChange={e => setText(e.target.value)}
               placeholder="Task name"
             />
             <textarea
-              className="border rounded px-2 py-1 w-full mb-2 h-24 resize-y transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 h-24 resize-y transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Task description (optional)"
             />
             <input
               type="date"
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
             />
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={priority}
               onChange={e => setPriority(e.target.value as Priority)}
             >
@@ -296,7 +301,7 @@ function TaskModal({
               <option value="High">High Priority</option>
             </select>
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={recurrence}
               onChange={e => setRecurrence(e.target.value as Recurrence)}
             >
@@ -306,7 +311,7 @@ function TaskModal({
               <option value="Monthly">Monthly</option>
             </select>
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
               value={category}
               onChange={e => setCategory(e.target.value as Category)}
             >
@@ -319,7 +324,7 @@ function TaskModal({
               <h3 className="font-semibold mb-2">Subtasks</h3>
               <div className="flex mb-2">
                 <input
-                  className="border rounded px-2 py-1 flex-1 mr-2"
+                  className="border rounded px-2 py-1 flex-1 mr-2 text-gray-800"
                   placeholder="New subtask"
                   value={newSubtaskText}
                   onChange={e => setNewSubtaskText(e.target.value)}
@@ -601,7 +606,7 @@ export default function HomePage() {
         setXP(Number(localStorage.getItem(`xp-${storedEmail}`) || "0"));
         setXPHistory(JSON.parse(localStorage.getItem(`xpHistory-${storedEmail}`) || "[]"));
         setUserRewards(JSON.parse(localStorage.getItem(`userRewards-${storedEmail}`) || "[]"));
-        // FIX: Ensure achievements are initialized correctly if not found
+        // Ensure achievements are initialized correctly if not found
         const storedAchievements = localStorage.getItem(`achievements-${storedEmail}`);
         setAchievements(storedAchievements ? JSON.parse(storedAchievements) : ACHIEVEMENTS);
 
@@ -790,8 +795,8 @@ export default function HomePage() {
     let updatedAchievements = false;
     const newAchievements = achievements.map(ach => {
       if (!ach.unlocked) {
-        // Pass current XP for specific achievement checks
-        const isUnlocked = ach.check(userStats); // FIX: Pass both userStats and xp
+        // Pass current XP for specific achievement checks, now all check functions expect both
+        const isUnlocked = ach.check(userStats, xp);
         if (isUnlocked) {
           updatedAchievements = true;
           setShowMsg({ type: "success", msg: `Achievement Unlocked: ${ach.name}! ${ach.icon}` });
@@ -999,7 +1004,7 @@ export default function HomePage() {
         loading ? "opacity-0" : "opacity-100"
       )}>
         <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-          <h1 className="text-3xl font-bold text-violet-600 mb-6">Gamified To-Do</h1>
+          <h1 className="text-3xl font-bold text-violet-600">Gamified To-Do</h1>
           <h2 className="text-2xl font-semibold text-center mb-6">
             {authMode === "login" ? "Welcome Back!" : "Join the Quest!"}
           </h2>
@@ -1094,7 +1099,7 @@ export default function HomePage() {
             <label htmlFor="theme-select" className="text-sm text-gray-600">Theme:</label>
             <select
               id="theme-select"
-              className="border rounded text-sm p-1"
+              className="border rounded text-sm p-1 text-gray-800"
               value={theme}
               onChange={(e) => setTheme(e.target.value as Theme)}
             >
@@ -1309,9 +1314,9 @@ export default function HomePage() {
               <span className="font-bold">Your Stats</span>
             </div>
             <ul className="text-sm">
-              <li>Total Tasks Completed: **{userStats.totalTasksCompleted}**</li>
-              <li>Current Streak: **{userStats.currentStreak}** days</li>
-              <li>Highest Streak: **{userStats.highestStreak}** days</li>
+              <li>Total Tasks Completed: {userStats.totalTasksCompleted}</li>
+              <li>Current Streak: {userStats.currentStreak} days</li>
+              <li>Highest Streak: {userStats.highestStreak} days</li>
             </ul>
             <button
               className="text-violet-600 text-xs underline mt-2 transition-colors duration-300 hover:text-violet-800"
@@ -1419,9 +1424,9 @@ export default function HomePage() {
       </div>
 
       {/* Task Detail Modal */}
-      {selectedTask && ( // FIX: Conditionally render based on selectedTask existence
+      {selectedTask && ( // Conditionally render based on selectedTask existence
         <TaskModal
-          task={selectedTask} // FIX: Removed ! as it's now guaranteed by the conditional render
+          task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onSave={handleEditTask}
           onComplete={handleCompleteTask}
@@ -1468,10 +1473,10 @@ export default function HomePage() {
         <div className="max-w-md mx-auto">
           <h2 className="text-xl font-bold mb-4">Your Statistics</h2>
           <ul className="text-lg space-y-2">
-            <li><FaTasks className="inline-block mr-2 text-violet-600" /> Total Tasks Completed: **{userStats.totalTasksCompleted}**</li>
-            <li><FaCalendarAlt className="inline-block mr-2 text-green-500" /> Current Streak: **{userStats.currentStreak}** days</li>
-            <li><FaTrophy className="inline-block mr-2 text-orange-500" /> Highest Streak: **{userStats.highestStreak}** days</li>
-            <li><span className="text-yellow-500 text-xl mr-2">⭐</span> Total XP Earned: **{xp}**</li>
+            <li> Total Tasks Completed: {userStats.totalTasksCompleted}</li>
+            <li> Current Streak: {userStats.currentStreak} days</li>
+            <li> Highest Streak: {userStats.highestStreak} days</li>
+            <li> Total XP Earned: {xp}</li>
             {/* Could add more stats here, e.g., tasks by priority, tasks by category */}
           </ul>
         </div>

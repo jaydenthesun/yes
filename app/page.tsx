@@ -82,7 +82,7 @@ type Achievement = {
   description: string;
   icon: string;
   unlocked: boolean;
-  check: (userStats: UserStats, currentXP: number) => boolean; // Function to check if unlocked
+  check: (userStats: UserStats) => boolean; // Function to check if unlocked
 };
 type Theme = "default" | "dark" | "blue" | "green"; // Example themes
 
@@ -108,7 +108,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete your very first task.",
     icon: "✨",
     unlocked: false,
-    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 1,
+    check: (stats: UserStats) => stats.totalTasksCompleted >= 1,
   },
   {
     id: "task_master_10",
@@ -116,7 +116,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete 10 tasks.",
     icon: "💪",
     unlocked: false,
-    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 10,
+    check: (stats: UserStats) => stats.totalTasksCompleted >= 10,
   },
   {
     id: "streak_3",
@@ -124,7 +124,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Maintain a 3-day completion streak.",
     icon: "🔥",
     unlocked: false,
-    check: (stats: UserStats, currentXP: number) => stats.highestStreak >= 3,
+    check: (stats: UserStats) => stats.highestStreak >= 3,
   },
   {
     id: "xp_collector_500",
@@ -132,7 +132,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Earn 500 total XP.",
     icon: "💰",
     unlocked: false,
-    check: (stats: UserStats, currentXP: number) => currentXP >= 500,
+    check: (stats: UserStats) => stats.totalTasksCompleted * XP_PER_TASK >= 500,
   },
 ];
 
@@ -591,7 +591,7 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedEmail = localStorage.getItem("userEmail");
-      const storedPassword = localStorage.getItem("userPassword"); // Unsafe storage for demo
+      //const storedPassword = localStorage.getItem("userPassword"); // Unsafe storage for demo
       const storedLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
       if (storedLoggedIn && storedEmail) {
@@ -686,11 +686,11 @@ export default function HomePage() {
     const today = getTodayDateString();
 
     let updatedTasks = [...tasks];
-    let streakIncreased = false;
+    //let streakIncreased = false;
 
     // Check streak
     if (userStats.lastStreakCheckDate !== today) {
-      const lastCheckDate = new Date(userStats.lastStreakCheckDate);
+    //const lastCheckDate = new Date(userStats.lastStreakCheckDate);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayString = yesterday.toISOString().split('T')[0];
@@ -791,7 +791,7 @@ export default function HomePage() {
     const newAchievements = achievements.map(ach => {
       if (!ach.unlocked) {
         // Pass current XP for specific achievement checks
-        const isUnlocked = ach.check(userStats, xp); // FIX: Pass both userStats and xp
+        const isUnlocked = ach.check(userStats); // FIX: Pass both userStats and xp
         if (isUnlocked) {
           updatedAchievements = true;
           setShowMsg({ type: "success", msg: `Achievement Unlocked: ${ach.name}! ${ach.icon}` });

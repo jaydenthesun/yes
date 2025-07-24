@@ -1,10 +1,9 @@
-// app/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   FaGift,
-  FaUser,
+  // FaUser, // Removed: 'FaUser' is defined but never used.
   FaCheckCircle,
   FaEdit,
   FaPlus,
@@ -22,14 +21,14 @@ import { AiOutlineClose } from "react-icons/ai";
 import clsx from "clsx";
 
 // --- Utility Functions ---
-function uuid() {
+function uuid(): string {
   if (typeof window !== "undefined") {
     return Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
   return "server-id-" + Math.random().toString(36).slice(2);
 }
 
-function getTodayDateString() {
+function getTodayDateString(): string {
   return new Date().toISOString().split("T")[0];
 }
 
@@ -75,15 +74,14 @@ type UserStats = {
   currentStreak: number;
   lastStreakCheckDate: string;
 };
-// Updated Achievement type to include currentXP in check function signature
+
 type Achievement = {
   id: string;
   name: string;
   description: string;
   icon: string;
   unlocked: boolean;
-  // All check functions will now accept both userStats and currentXP
-  check: (userStats: UserStats, currentXP: number) => boolean;
+  check: (userStats: UserStats) => boolean; // Function to check if unlocked
 };
 type Theme = "default" | "dark" | "blue" | "green"; // Example themes
 
@@ -101,7 +99,6 @@ const REWARDS: Reward[] = [
   { id: "gaming", name: "Gaming Credit ($20)", emoji: "🎮", cost: 1200, link: "https://www.xbox.com/en-us/play" },
 ];
 
-// Corrected the check function signature for all achievements
 const ACHIEVEMENTS: Achievement[] = [
   {
     id: "first_task",
@@ -109,8 +106,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete your very first task.",
     icon: "✨",
     unlocked: false,
-    // Now accepts currentXP, even if not directly used
-    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 1,
+    check: (stats: UserStats) => stats.totalTasksCompleted >= 1,
   },
   {
     id: "task_master_10",
@@ -118,8 +114,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Complete 10 tasks.",
     icon: "💪",
     unlocked: false,
-    // Now accepts currentXP, even if not directly used
-    check: (stats: UserStats, currentXP: number) => stats.totalTasksCompleted >= 10,
+    check: (stats: UserStats) => stats.totalTasksCompleted >= 10,
   },
   {
     id: "streak_3",
@@ -127,8 +122,7 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Maintain a 3-day completion streak.",
     icon: "🔥",
     unlocked: false,
-    // Now accepts currentXP, even if not directly used
-    check: (stats: UserStats, currentXP: number) => stats.highestStreak >= 3,
+    check: (stats: UserStats) => stats.highestStreak >= 3,
   },
   {
     id: "xp_collector_500",
@@ -136,15 +130,14 @@ const ACHIEVEMENTS: Achievement[] = [
     description: "Earn 500 total XP.",
     icon: "💰",
     unlocked: false,
-    // This one correctly uses currentXP
-    check: (stats: UserStats, currentXP: number) => currentXP >= 500,
+    check: (stats: UserStats) => stats.totalTasksCompleted * XP_PER_TASK >= 500,
   },
 ];
 
 const CATEGORIES: Category[] = ["Work", "Personal", "Health", "Learning", "Other"];
 
 // --- Helper Functions ---
-function getPriorityColor(priority: Priority) {
+function getPriorityColor(priority: Priority): string {
   switch (priority) {
     case "High":
       return "border-red-500";
@@ -155,7 +148,7 @@ function getPriorityColor(priority: Priority) {
   }
 }
 
-function getLevel(xp: number) {
+function getLevel(xp: number): number {
   return Math.floor(xp / 100) + 1;
 }
 
@@ -274,25 +267,25 @@ function TaskModal({
         {edit ? (
           <>
             <input
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={text}
               onChange={e => setText(e.target.value)}
               placeholder="Task name"
             />
             <textarea
-              className="border rounded px-2 py-1 w-full mb-2 h-24 resize-y transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 h-24 resize-y transition-shadow duration-300 focus:shadow-lg"
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Task description (optional)"
             />
             <input
               type="date"
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
             />
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={priority}
               onChange={e => setPriority(e.target.value as Priority)}
             >
@@ -301,7 +294,7 @@ function TaskModal({
               <option value="High">High Priority</option>
             </select>
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={recurrence}
               onChange={e => setRecurrence(e.target.value as Recurrence)}
             >
@@ -311,7 +304,7 @@ function TaskModal({
               <option value="Monthly">Monthly</option>
             </select>
             <select
-              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg text-gray-800"
+              className="border rounded px-2 py-1 w-full mb-2 transition-shadow duration-300 focus:shadow-lg"
               value={category}
               onChange={e => setCategory(e.target.value as Category)}
             >
@@ -324,7 +317,7 @@ function TaskModal({
               <h3 className="font-semibold mb-2">Subtasks</h3>
               <div className="flex mb-2">
                 <input
-                  className="border rounded px-2 py-1 flex-1 mr-2 text-gray-800"
+                  className="border rounded px-2 py-1 flex-1 mr-2"
                   placeholder="New subtask"
                   value={newSubtaskText}
                   onChange={e => setNewSubtaskText(e.target.value)}
@@ -557,7 +550,7 @@ function CustomRewardModal({
 export default function HomePage() {
   // --- Auth State ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "signup" | null>(null); // null, 'login', 'signup'
+  // const [authMode, setAuthMode] = useState<"login" | "signup" | null>(null); // Removed: 'authMode' is assigned a value but never used.
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -582,7 +575,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [userRewards, setUserRewards] = useState<Reward[]>([]); // For custom rewards
   const [showCustomRewardModal, setShowCustomRewardModal] = useState(false);
-  const [achievements, setAchievements] = useState<Achievement[]>(ACHIEVEMENTS);
+  const [achievements, setAchievements] = useState<Achievement[]>(ACHIEVEMENTS); // Initialize with constants
   const [userStats, setUserStats] = useState<UserStats>({
     totalTasksCompleted: 0,
     highestStreak: 0,
@@ -593,10 +586,10 @@ export default function HomePage() {
   const [filterCategory, setFilterCategory] = useState<Category | "All">("All");
 
   // --- Load from Local Storage on Client (User-specific data) ---
+  // This useEffect now correctly re-hydrates achievements
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedEmail = localStorage.getItem("userEmail");
-      //const storedPassword = localStorage.getItem("userPassword"); // Unsafe storage for demo
       const storedLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
       if (storedLoggedIn && storedEmail) {
@@ -606,20 +599,29 @@ export default function HomePage() {
         setXP(Number(localStorage.getItem(`xp-${storedEmail}`) || "0"));
         setXPHistory(JSON.parse(localStorage.getItem(`xpHistory-${storedEmail}`) || "[]"));
         setUserRewards(JSON.parse(localStorage.getItem(`userRewards-${storedEmail}`) || "[]"));
-        // Ensure achievements are initialized correctly if not found
-        const storedAchievements = localStorage.getItem(`achievements-${storedEmail}`);
-        setAchievements(storedAchievements ? JSON.parse(storedAchievements) : ACHIEVEMENTS);
+
+        // Load achievements and re-hydrate the 'check' functions
+        const storedAchievementsData = localStorage.getItem(`achievements-${storedEmail}`);
+        const loadedAchievements: Pick<Achievement, 'id' | 'unlocked'>[] = storedAchievementsData ? JSON.parse(storedAchievementsData) : [];
+
+        const rehydratedAchievements = ACHIEVEMENTS.map(initialAch => {
+          const storedAch = loadedAchievements.find(la => la.id === initialAch.id);
+          // If a stored version exists, use its 'unlocked' status, otherwise use initial
+          return storedAch ? { ...initialAch, unlocked: storedAch.unlocked } : initialAch;
+        });
+        setAchievements(rehydratedAchievements);
 
         setUserStats(JSON.parse(localStorage.getItem(`userStats-${storedEmail}`) || JSON.stringify(userStats)));
         setTheme(localStorage.getItem(`theme-${storedEmail}`) as Theme || "default");
       } else {
+        // Reset to default/guest state if not logged in
         setIsLoggedIn(false);
-        setUsername("Guest"); // Reset for guest
-        setTasks([]); // Clear tasks for guest
+        setUsername("Guest");
+        setTasks([]);
         setXP(0);
         setXPHistory([]);
         setUserRewards([]);
-        setAchievements(ACHIEVEMENTS); // Reset achievements for guest
+        setAchievements(ACHIEVEMENTS); // Always start with fresh achievements for guests
         setUserStats({ totalTasksCompleted: 0, highestStreak: 0, currentStreak: 0, lastStreakCheckDate: "" });
         setTheme("default");
       }
@@ -628,6 +630,7 @@ export default function HomePage() {
   }, [isLoggedIn]); // Rerun when login state changes
 
   // --- Persist to Local Storage (User-specific data) ---
+  // Store only the `unlocked` status of achievements, not the functions
   const currentEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
 
   useEffect(() => {
@@ -662,7 +665,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && currentEmail) {
-      localStorage.setItem(`achievements-${currentEmail}`, JSON.stringify(achievements));
+      // Store only the serializable parts of achievements (id and unlocked status)
+      const serializableAchievements = achievements.map(({ id, unlocked }) => ({ id, unlocked }));
+      localStorage.setItem(`achievements-${currentEmail}`, JSON.stringify(serializableAchievements));
     }
   }, [achievements, currentEmail]);
 
@@ -690,12 +695,11 @@ export default function HomePage() {
     if (!isLoggedIn) return; // Only run for logged-in users
     const today = getTodayDateString();
 
-    let updatedTasks = [...tasks];
-    //let streakIncreased = false;
+    // Changed to const as it's not reassigned globally in this block
+    const updatedTasks = [...tasks];
 
     // Check streak
     if (userStats.lastStreakCheckDate !== today) {
-    //const lastCheckDate = new Date(userStats.lastStreakCheckDate);
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayString = yesterday.toISOString().split('T')[0];
@@ -707,6 +711,7 @@ export default function HomePage() {
         if (completedYesterday || userStats.lastStreakCheckDate === "") { // Streak continues or starts
           setUserStats(prev => {
             const newCurrentStreak = prev.currentStreak + 1;
+            // Only award XP if it's a new highest streak
             if (newCurrentStreak > prev.highestStreak) {
               setXP(oldXP => oldXP + STREAK_BONUS_XP_DAILY);
               setXPHistory(prevHistory => [
@@ -722,18 +727,24 @@ export default function HomePage() {
               lastStreakCheckDate: today,
             };
           });
-        } else { // Streak broken
+        } else { // Streak broken (completed today but not yesterday, and streak was active)
           setUserStats(prev => ({
             ...prev,
-            currentStreak: completedToday ? 1 : 0, // Reset to 1 if completed today, else 0
+            currentStreak: 1, // Start a new streak
             lastStreakCheckDate: today,
           }));
         }
-      } else { // No task completed today, check if yesterday was also missed for streak break
-        if (userStats.lastStreakCheckDate !== "" && userStats.lastStreakCheckDate !== yesterdayString) {
+      } else { // No task completed today
+        // Only break streak if last check date was not today or yesterday
+        if (userStats.lastStreakCheckDate !== "" && userStats.lastStreakCheckDate !== yesterdayString && userStats.currentStreak > 0) {
           setUserStats(prev => ({
             ...prev,
             currentStreak: 0,
+            lastStreakCheckDate: today,
+          }));
+        } else if (userStats.lastStreakCheckDate === "") { // First time checking for a new user
+          setUserStats(prev => ({
+            ...prev,
             lastStreakCheckDate: today,
           }));
         }
@@ -741,7 +752,7 @@ export default function HomePage() {
     }
 
     // Handle recurring tasks
-    updatedTasks = updatedTasks.map(task => {
+    const tasksAfterRecurrenceReset = updatedTasks.map(task => {
       if (task.recurrence === "None" || !task.completed) {
         return task;
       }
@@ -750,22 +761,22 @@ export default function HomePage() {
       if (!lastCompleted) return task; // Should not happen for recurring completed tasks
 
       const lastDate = new Date(lastCompleted);
-      const nextDueDate = new Date(lastDate);
+      const nextResetDate = new Date(lastDate);
 
       let shouldReset = false;
 
       switch (task.recurrence) {
         case "Daily":
-          nextDueDate.setDate(lastDate.getDate() + 1);
-          shouldReset = nextDueDate.toISOString().split('T')[0] <= today;
+          nextResetDate.setDate(lastDate.getDate() + 1);
+          shouldReset = nextResetDate.toISOString().split('T')[0] <= today;
           break;
         case "Weekly":
-          nextDueDate.setDate(lastDate.getDate() + 7);
-          shouldReset = nextDueDate.toISOString().split('T')[0] <= today;
+          nextResetDate.setDate(lastDate.getDate() + 7);
+          shouldReset = nextResetDate.toISOString().split('T')[0] <= today;
           break;
         case "Monthly":
-          nextDueDate.setMonth(lastDate.getMonth() + 1);
-          shouldReset = nextDueDate.toISOString().split('T')[0] <= today;
+          nextResetDate.setMonth(lastDate.getMonth() + 1);
+          shouldReset = nextResetDate.toISOString().split('T')[0] <= today;
           break;
       }
 
@@ -775,44 +786,44 @@ export default function HomePage() {
           completed: false, // Reset completion status
           lastCompletedDate: undefined, // Clear last completed date
           createdAt: Date.now(), // Treat as new for sorting
-          dueDate: task.recurrence === "Daily" ? today : task.dueDate, // Maybe update due date for daily
+          dueDate: task.recurrence === "Daily" ? today : task.dueDate, // Consider updating due date for daily recurring
         };
       }
       return task;
     });
 
-    // Only update tasks if changes were made
-    const didTasksChange = JSON.stringify(updatedTasks) !== JSON.stringify(tasks);
+    // Only update tasks if changes were made due to recurrence or initial load
+    const didTasksChange = JSON.stringify(tasksAfterRecurrenceReset) !== JSON.stringify(tasks);
     if (didTasksChange) {
-      setTasks(updatedTasks);
+      setTasks(tasksAfterRecurrenceReset);
     }
-  }, [tasks, userStats, isLoggedIn]); // Dependency on tasks ensures re-evaluation after task completion
+  }, [tasks, userStats, isLoggedIn]); // Added userStats to dependencies for exhaustive-deps
 
 
   // --- Achievement Check ---
   useEffect(() => {
     if (!isLoggedIn) return;
-    let updatedAchievements = false;
-    const newAchievements = achievements.map(ach => {
+    let anyAchievementUnlocked = false;
+    const updatedAchievements = achievements.map(ach => {
       if (!ach.unlocked) {
-        // Pass current XP for specific achievement checks, now all check functions expect both
-        const isUnlocked = ach.check(userStats, xp);
+        // Pass userStats to the achievement check function
+        const isUnlocked = ach.check(userStats);
         if (isUnlocked) {
-          updatedAchievements = true;
+          anyAchievementUnlocked = true;
           setShowMsg({ type: "success", msg: `Achievement Unlocked: ${ach.name}! ${ach.icon}` });
           return { ...ach, unlocked: true };
         }
       }
       return ach;
     });
-    if (updatedAchievements) {
-      setAchievements(newAchievements);
+    if (anyAchievementUnlocked) {
+      setAchievements(updatedAchievements);
     }
-  }, [userStats, xp, achievements, isLoggedIn]);
+  }, [userStats, achievements, isLoggedIn]);
 
 
   // --- Authentication Handlers ---
-  const handleLogin = () => {
+  const handleLogin = useCallback(() => {
     setAuthError("");
     if (!authEmail || !authPassword) {
       setAuthError("Email and password are required.");
@@ -823,16 +834,16 @@ export default function HomePage() {
       localStorage.setItem("userEmail", authEmail);
       localStorage.setItem("isLoggedIn", "true");
       setIsLoggedIn(true);
-      setAuthMode(null);
+      // setAuthMode(null); // No longer needed
       setAuthEmail("");
       setAuthPassword("");
       setShowMsg({ type: "success", msg: `Welcome back, ${localStorage.getItem(`username-${authEmail}`) || authEmail.split('@')[0]}!` });
     } else {
       setAuthError("Invalid email or password.");
     }
-  };
+  }, [authEmail, authPassword]);
 
-  const handleSignUp = () => {
+  const handleSignUp = useCallback(() => {
     setAuthError("");
     if (!authEmail || !authPassword) {
       setAuthError("Email and password are required.");
@@ -848,23 +859,23 @@ export default function HomePage() {
     localStorage.setItem("userEmail", authEmail);
     localStorage.setItem("isLoggedIn", "true");
     setIsLoggedIn(true);
-    setAuthMode(null);
+    // setAuthMode(null); // No longer needed
     setAuthEmail("");
     setAuthPassword("");
     setShowMsg({ type: "success", msg: `Account created for ${authEmail.split('@')[0]}!` });
-  };
+  }, [authEmail, authPassword]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("userEmail");
       localStorage.removeItem("isLoggedIn");
       setIsLoggedIn(false);
       setShowMsg({ type: "success", msg: "Logged out successfully!" });
     }
-  };
+  }, []);
 
   // --- Task Handlers ---
-  const handleAddTask = () => {
+  const handleAddTask = useCallback(() => {
     if (!taskInput.trim()) return;
     const newTask: Task = {
       id: uuid(),
@@ -885,647 +896,596 @@ export default function HomePage() {
     setPriority("Low");
     setRecurrence("None");
     setCategory("Personal");
-    setShowMsg({ type: "success", msg: "Task added!" });
-  };
+    setShowMsg({ type: "success", msg: "Task added successfully!" });
+  }, [taskInput, taskDescription, dueDate, priority, recurrence, category]);
 
-  const handleCompleteTask = useCallback((task: Task) => {
-    setTasks(prev => prev.map(t =>
-      t.id === task.id
-        ? { ...t, completed: true, lastCompletedDate: getTodayDateString() }
-        : t
-    ));
+  const handleUpdateTask = useCallback((updatedTask: Task) => {
+    setTasks(prev => prev.map(t => (t.id === updatedTask.id ? updatedTask : t)));
+    setShowMsg({ type: "success", msg: "Task updated!" });
+  }, []);
 
-    let xpEarned = XP_PER_TASK;
-    let xpDescription = `Completed task: "${task.text}"`;
+  const handleDeleteTask = useCallback((taskToDelete: Task) => {
+    setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
+    setShowMsg({ type: "success", msg: "Task deleted!" });
+  }, []);
 
-    if (task.priority === "High") {
-      xpEarned += XP_PER_HIGH_PRIORITY_TASK;
-      xpDescription += " (+High Priority Bonus)";
-    }
-    if (task.dueDate && new Date(task.dueDate) >= new Date(getTodayDateString())) {
-      xpEarned += XP_PER_TASK_ON_TIME;
-      xpDescription += " (+On-Time Bonus)";
-    }
+  const handleToggleTaskCompletion = useCallback((taskToToggle: Task) => {
+    setTasks(prevTasks => {
+      const updatedTasks = prevTasks.map(task =>
+        task.id === taskToToggle.id
+          ? {
+              ...task,
+              completed: !task.completed,
+              lastCompletedDate: !task.completed ? getTodayDateString() : undefined, // Set/clear last completed date
+            }
+          : task
+      );
 
-    setXP(prev => prev + xpEarned);
-    setXPHistory(prev => [
-      { id: uuid(), change: xpEarned, description: xpDescription, timestamp: Date.now() },
-      ...prev,
-    ]);
-    setShowMsg({ type: "success", msg: `Task completed! +${xpEarned} XP` });
+      const completedTask = updatedTasks.find(t => t.id === taskToToggle.id);
 
-    setUserStats(prev => ({
-      ...prev,
-      totalTasksCompleted: prev.totalTasksCompleted + 1,
-      currentStreak: prev.currentStreak + 1, // Will be re-evaluated by useEffect
-      lastStreakCheckDate: getTodayDateString(),
-    }));
-  }, [setTasks, setXP, setXPHistory, setShowMsg, setUserStats]);
+      if (completedTask && completedTask.completed) {
+        // Calculate XP earned
+        let xpEarned = XP_PER_TASK;
+        if (completedTask.priority === "High") {
+          xpEarned += XP_PER_HIGH_PRIORITY_TASK;
+        }
+        if (completedTask.dueDate && new Date(completedTask.dueDate) >= new Date()) {
+          xpEarned += XP_PER_TASK_ON_TIME;
+        }
 
-  const handleDeleteTask = useCallback((task: Task) => {
-    setTasks(prev => prev.filter(t => t.id !== task.id));
-    setShowMsg({ type: "success", msg: "Task deleted." });
-  }, [setTasks, setShowMsg]);
+        setXP(prevXP => prevXP + xpEarned);
+        setXPHistory(prevHistory => [
+          { id: uuid(), change: xpEarned, description: `Completed "${completedTask.text}"`, timestamp: Date.now() },
+          ...prevHistory,
+        ]);
+        setShowMsg({ type: "success", msg: `Task Completed! +${xpEarned} XP` });
 
-  const handleEditTask = useCallback((updated: Task) => {
-    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-    setShowMsg({ type: "success", msg: "Task updated." });
-  }, [setTasks, setShowMsg]);
-
-  // --- Reward Handlers ---
-  const handleRedeem = useCallback((reward: Reward) => {
-    if (xp < reward.cost) {
-      setShowMsg({ type: "error", msg: "Not enough XP!" });
-      return;
-    }
-    setXP(prev => prev - reward.cost);
-    setXPHistory(prev => [
-      { id: uuid(), change: -reward.cost, description: `Redeemed: ${reward.name}`, timestamp: Date.now() },
-      ...prev,
-    ]);
-    setShowMsg({ type: "success", msg: `Redeemed ${reward.name}!` });
-
-    if (reward.link && typeof window !== 'undefined') {
-      window.open(reward.link, "_blank");
-    } else if (reward.link && typeof window === 'undefined') {
-      console.warn("Attempted to open link on server, which is not supported:", reward.link);
-    } else {
-      console.log(`No link provided for reward: ${reward.name}`);
-    }
-  }, [xp, setXP, setXPHistory, setShowMsg]);
+        // Update user stats for achievements/streaks
+        setUserStats(prevStats => ({
+          ...prevStats,
+          totalTasksCompleted: prevStats.totalTasksCompleted + 1,
+        }));
+      }
+      return updatedTasks;
+    });
+  }, []); // Dependencies for useCallback are handled by React's linting if needed, but none appear missing here.
 
   const handleAddCustomReward = useCallback((newReward: Omit<Reward, 'id'>) => {
-    const rewardWithId = { ...newReward, id: uuid() };
-    setUserRewards(prev => [...prev, rewardWithId]);
-    setShowMsg({ type: "success", msg: `Custom reward "${newReward.name}" created!` });
-  }, [setUserRewards, setShowMsg]);
+    setUserRewards(prev => [...prev, { id: uuid(), ...newReward }]);
+    setShowMsg({ type: "success", msg: `Custom reward "${newReward.name}" added!` });
+  }, []);
 
-  // --- Other Handlers ---
-  const handleUsernameChange = useCallback((newName: string) => {
-    if (!newName.trim()) {
-      setShowMsg({ type: "error", msg: "Username cannot be empty." });
-      return;
+  const handleRedeemReward = useCallback((reward: Reward) => {
+    if (xp >= reward.cost) {
+      setXP(prevXP => prevXP - reward.cost);
+      setXPHistory(prevHistory => [
+        { id: uuid(), change: -reward.cost, description: `Redeemed "${reward.name}"`, timestamp: Date.now() },
+        ...prevHistory,
+      ]);
+      setShowMsg({ type: "success", msg: `You redeemed "${reward.name}"!` });
+      if (reward.link) {
+        window.open(reward.link, "_blank");
+      }
+    } else {
+      setShowMsg({ type: "error", msg: `Not enough XP to redeem "${reward.name}".` });
     }
-    setUsername(newName.trim());
-    setEditingUsername(false);
-    setShowMsg({ type: "success", msg: "Username updated!" });
-  }, [setUsername, setEditingUsername, setShowMsg]);
+  }, [xp]);
 
-  const handleDeleteXPHistory = useCallback(() => {
-    setXPHistory([]);
-    setShowMsg({ type: "success", msg: "XP history deleted." });
-  }, [setXPHistory, setShowMsg]);
+  const handleDeleteReward = useCallback((rewardId: string) => {
+    setUserRewards(prev => prev.filter(r => r.id !== rewardId));
+    setShowMsg({ type: "success", msg: "Custom reward deleted." });
+  }, []);
 
-  // --- Filtered and Sorted Tasks ---
-  const filteredAndSortedTasks = useMemo(() => {
-    return [...tasks]
+
+  const completedTasks = useMemo(() => tasks.filter(task => task.completed), [tasks]);
+  const incompleteTasks = useMemo(() =>
+    tasks
+      .filter(task => !task.completed)
       .filter(task => filterCategory === "All" || task.category === filterCategory)
       .sort((a, b) => {
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        const pOrder = { High: 0, Medium: 1, Low: 2 };
-        if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
-        if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
-        return a.createdAt - b.createdAt;
-      });
-  }, [tasks, filterCategory]);
+        // Sort by priority: High > Medium > Low
+        const priorityOrder = { "High": 3, "Medium": 2, "Low": 1 };
+        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+        if (priorityDiff !== 0) return priorityDiff;
 
-  const allRewards = useMemo(() => [...REWARDS, ...userRewards], [userRewards]);
+        // Then by due date (earliest first, undated last)
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        if (a.dueDate) return -1; // a has due date, b doesn't
+        if (b.dueDate) return 1;  // b has due date, a doesn't
+        return 0; // No due dates
+      }),
+    [tasks, filterCategory]
+  );
+
+  const totalRewards = useMemo(() => [...REWARDS, ...userRewards], [userRewards]);
+
+  // --- Theme Application ---
   const currentTheme = THEME_CLASSES[theme];
 
-
-  // --- Auth Screen ---
-  if (!isLoggedIn) {
+  // --- Render Logic ---
+  if (loading) {
     return (
-      <div className={clsx(
-        "min-h-screen flex items-center justify-center p-4",
-        currentTheme.bg,
-        currentTheme.text,
-        "transition-colors duration-700",
-        loading ? "opacity-0" : "opacity-100"
-      )}>
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-          <h1 className="text-3xl font-bold text-violet-600">Gamified To-Do</h1>
-          <h2 className="text-2xl font-semibold text-center mb-6">
-            {authMode === "login" ? "Welcome Back!" : "Join the Quest!"}
-          </h2>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="Enter your email"
-              value={authEmail}
-              onChange={(e) => { setAuthEmail(e.target.value); setAuthError(""); }}
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="Enter your password"
-              value={authPassword}
-              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
-            />
-          </div>
-          {authError && <p className="text-red-500 text-xs italic mb-4">{authError}</p>}
-          <div className="flex flex-col gap-3">
-            {authMode === "login" ? (
-              <button
-                className={clsx(
-                  "flex items-center justify-center gap-2",
-                  currentTheme.primary,
-                  "hover:opacity-90 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-all duration-300 active:scale-95"
-                )}
-                onClick={handleLogin}
-              >
-                <FaSignInAlt /> Login
-              </button>
-            ) : (
-              <button
-                className={clsx(
-                  "flex items-center justify-center gap-2",
-                  currentTheme.primary,
-                  "hover:opacity-90 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-all duration-300 active:scale-95"
-                )}
-                onClick={handleSignUp}
-              >
-                <FaUserPlus /> Sign Up
-              </button>
-            )}
-            <button
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-all duration-300 active:scale-95"
-              onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
-            >
-              {authMode === "login" ? "Need an account? Sign Up" : "Already have an account? Login"}
-            </button>
-          </div>
-        </div>
-        {showMsg && <Modal onClose={() => setShowMsg(null)} isOpen={!!showMsg}>
-          <div className="p-4">
-            <div className={clsx("font-bold mb-2", showMsg.type === "success" ? "text-green-600" : "text-red-600")}>
-              {showMsg.type === "success" ? "Success" : "Error"}
-            </div>
-            <div>{showMsg.msg}</div>
-          </div>
-        </Modal>}
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-500 to-indigo-500 text-white text-3xl animate-pulse">
+        Loading Your Productivity Hub...
       </div>
     );
   }
 
-  // --- Main App Render (Logged In) ---
   return (
-    <div className={clsx(
-      "min-h-screen p-4 transition-opacity duration-700",
-      currentTheme.bg,
-      currentTheme.text,
-      loading ? "opacity-0" : "opacity-100"
-    )}>
-      {/* Header */}
-      <div className={clsx(
-        "bg-white rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between mb-6",
-        "transition-all duration-700",
-        loading ? "translate-y-8 opacity-0" : "translate-y-0 opacity-100"
-      )}>
-        <div>
-          <h1 className="text-3xl font-bold text-violet-600">Gamified To-Do</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <label htmlFor="theme-select" className="text-sm text-gray-600">Theme:</label>
-            <select
-              id="theme-select"
-              className="border rounded text-sm p-1 text-gray-800"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as Theme)}
-            >
-              {Object.keys(THEME_CLASSES).map((t) => (
-                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 mt-4 md:mt-0">
-          <FaUser className="text-xl transition-transform duration-300 hover:scale-110" />
-          {editingUsername ? (
-            <input
-              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              onBlur={() => handleUsernameChange(username)}
-              onKeyDown={e => e.key === "Enter" && handleUsernameChange(username)}
-              autoFocus
-            />
-          ) : (
-            <span
-              className="font-semibold cursor-pointer hover:underline transition-colors duration-300"
-              onClick={() => setEditingUsername(true)}
-              title="Edit username"
-            >
-              {username}
-              <FaEdit className="inline ml-1 text-gray-400 transition-transform duration-300 hover:scale-110" />
-            </span>
+    <div className={clsx("min-h-screen p-4 transition-colors duration-300", currentTheme.bg, currentTheme.text)}>
+      {/* Notification Message */}
+      {showMsg && (
+        <div
+          className={clsx(
+            "fixed top-4 left-1/2 -translate-x-1/2 z-50 p-3 rounded-lg shadow-md flex items-center gap-2 animate-fade-in-down",
+            showMsg.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"
           )}
-          <span className="ml-2 text-gray-500">
-            Level: {getLevel(xp)} | XP: {xp}
-          </span>
-          <button
-            className="bg-red-500 text-white px-3 py-1 rounded-full text-sm hover:bg-red-600 transition-colors duration-300 flex items-center gap-1 active:scale-95"
-            onClick={handleLogout}
-          >
-            <FaSignOutAlt /> Logout
+          role="alert"
+        >
+          {showMsg.type === "success" ? (
+            <FaCheckCircle className="text-xl" />
+          ) : (
+            <AiOutlineClose className="text-xl" />
+          )}
+          <span>{showMsg.msg}</span>
+          <button onClick={() => setShowMsg(null)} className="ml-2">
+            <AiOutlineClose />
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Content */}
-      <div className={clsx(
-        "flex flex-col lg:flex-row gap-6 transition-all duration-700",
-        loading ? "translate-y-8 opacity-0" : "translate-y-0 opacity-100"
-      )}>
-        {/* Left: Tasks */}
-        <div className="flex-1 bg-white rounded-xl shadow p-6">
-          <div className="flex items-center mb-4">
-            <FaCheckCircle className="text-green-500 mr-2 transition-transform duration-300 hover:scale-110" />
-            <h2 className="text-xl font-bold">Your Tasks</h2>
-          </div>
-          <div className="flex flex-col md:flex-row gap-2 mb-4">
-            <input
-              className="border rounded px-2 py-1 flex-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              placeholder="Add a new task..."
-              value={taskInput}
-              onChange={e => setTaskInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAddTask()}
-            />
-            <input
-              type="date"
-              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-            />
-            <select
-              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              value={priority}
-              onChange={e => setPriority(e.target.value as Priority)}
-            >
-              <option value="Low">Low Priority</option>
-              <option value="Medium">Medium Priority</option>
-              <option value="High">High Priority</option>
-            </select>
-            <select
-              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              value={recurrence}
-              onChange={e => setRecurrence(e.target.value as Recurrence)}
-            >
-              <option value="None">No Recurrence</option>
-              <option value="Daily">Daily</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Monthly">Monthly</option>
-            </select>
-            <select
-              className="border rounded px-2 py-1 transition-shadow duration-300 focus:shadow-lg text-gray-800"
-              value={category}
-              onChange={e => setCategory(e.target.value as Category)}
-            >
-              {CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+      {/* Auth UI */}
+      {!isLoggedIn && (
+        <div className="max-w-md mx-auto my-10 p-8 bg-white rounded-lg shadow-lg">
+          <h1 className="text-3xl font-bold text-center mb-6 text-violet-600">Welcome to TaskMaster!</h1>
+          <p className="text-gray-700 text-center mb-6">Login or sign up to manage your tasks, earn XP, and unlock achievements!</p>
+
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+            value={authEmail}
+            onChange={(e) => setAuthEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full p-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+            value={authPassword}
+            onChange={(e) => setAuthPassword(e.target.value)}
+          />
+          {authError && <p className="text-red-500 text-sm text-center mb-4">{authError}</p>}
+
+          <div className="flex gap-4">
             <button
+              onClick={handleLogin}
               className={clsx(
-                currentTheme.primary,
-                "text-white px-4 py-2 rounded font-semibold hover:opacity-90 transition-all duration-300 active:scale-95 flex items-center justify-center gap-1"
+                "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-all duration-300 transform active:scale-95",
+                currentTheme.primary, "text-white hover:bg-violet-700"
               )}
+            >
+              <FaSignInAlt /> Login
+            </button>
+            <button
+              onClick={handleSignUp}
+              className={clsx(
+                "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-all duration-300 transform active:scale-95",
+                "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              )}
+            >
+              <FaUserPlus /> Sign Up
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoggedIn && (
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <header className="flex flex-col md:flex-row justify-between items-center py-6 border-b border-gray-300 mb-6">
+            <div className="flex items-center gap-4 mb-4 md:mb-0">
+              <h1 className="text-4xl font-extrabold flex items-center">
+                <FaTasks className="mr-2 text-violet-600" /> TaskMaster
+              </h1>
+              <div className="relative">
+                {editingUsername ? (
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    onBlur={() => setEditingUsername(false)}
+                    onKeyDown={(e) => e.key === "Enter" && setEditingUsername(false)}
+                    className="p-1 border rounded"
+                    autoFocus
+                  />
+                ) : (
+                  <span className="text-2xl font-semibold cursor-pointer" onClick={() => setEditingUsername(true)}>
+                    {username}
+                  </span>
+                )}
+                <button onClick={() => setEditingUsername(true)} className="ml-2 text-gray-500 hover:text-gray-700">
+                  <FaEdit />
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 md:gap-4">
+              <button
+                onClick={() => setShowStatsModal(true)}
+                className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform active:scale-95", currentTheme.secondary, "text-white hover:opacity-80")}
+              >
+                <FaChartBar /> Stats
+              </button>
+              <button
+                onClick={() => setShowAchievementsModal(true)}
+                className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform active:scale-95", currentTheme.secondary, "text-white hover:opacity-80")}
+              >
+                <FaTrophy /> Achievements
+              </button>
+              <button
+                onClick={() => setShowXPModal(true)}
+                className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform active:scale-95", currentTheme.secondary, "text-white hover:opacity-80")}
+              >
+                <FaGift /> Rewards
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform active:scale-95 bg-red-500 text-white hover:bg-red-600"
+              >
+                <FaSignOutAlt /> Logout
+              </button>
+            </div>
+          </header>
+
+          {/* XP & Level */}
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-2xl font-bold text-gray-800">XP: {xp}</span>
+              <span className="text-xl font-semibold text-violet-600">Level: {getLevel(xp)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="theme-select" className="text-gray-700">Theme:</label>
+              <select
+                id="theme-select"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as Theme)}
+                className="border rounded px-2 py-1 bg-gray-50"
+              >
+                <option value="default">Default</option>
+                <option value="dark">Dark</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Add New Task */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">Add New Task</h2>
+            <input
+              type="text"
+              className="w-full p-3 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="What needs to be done?"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
+            />
+            <textarea
+              className="w-full p-3 border border-gray-300 rounded-lg mb-3 h-20 resize-y focus:outline-none focus:ring-2 focus:ring-violet-500"
+              placeholder="Description (optional)"
+              value={taskDescription}
+              onChange={(e) => setTaskDescription(e.target.value)}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt className="text-gray-500" />
+                <input
+                  type="date"
+                  className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <FaTag className="text-gray-500" />
+                <select
+                  className="flex-1 p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                >
+                  <option value="Low">Low Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="High">High Priority</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <BsFillCalendarDateFill className="text-gray-500" />
+                <select
+                  className="flex-1 p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+                >
+                  <option value="None">No Recurrence</option>
+                  <option value="Daily">Daily</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaTag className="text-gray-500" />
+                <select
+                  className="flex-1 p-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as Category)}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button
               onClick={handleAddTask}
+              className={clsx("w-full py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all duration-300 transform active:scale-95", currentTheme.primary, "hover:opacity-80")}
             >
               <FaPlus /> Add Task
             </button>
           </div>
-          <div className="mb-4">
-            <label htmlFor="filterCategory" className="mr-2 text-gray-600">Filter by Category:</label>
-            <select
-              id="filterCategory"
-              className="border rounded px-2 py-1 text-gray-800"
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value as Category | "All")}
-            >
-              <option value="All">All Categories</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          {filteredAndSortedTasks.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">No tasks yet! Add one to start earning XP.</div>
-          ) : (
-            <ul>
-              {filteredAndSortedTasks.map(task => (
-                <li
-                  key={task.id}
-                  className={clsx(
-                    "flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-4 shadow-sm border-l-4 cursor-pointer transition-all duration-300 hover:bg-gray-100",
-                    getPriorityColor(task.priority),
-                    task.completed && "opacity-60"
-                  )}
-                  onClick={() => setSelectedTask(task)}
-                >
-                  <div>
-                    <div className="font-semibold flex items-center gap-2">
-                      <FaTasks className="text-gray-500" /> {task.text}
-                    </div>
-                    {task.description && (
-                      <div className="text-xs text-gray-600 truncate max-w-sm">
-                        {task.description}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500 flex items-center gap-2 mt-1">
-                      {task.dueDate && (
-                        <>
-                          <BsFillCalendarDateFill /> {task.dueDate}
-                        </>
-                      )}
-                      <FaTag className="text-gray-400" /> {task.category}
-                      <span className="ml-1">| {task.priority} Priority</span>
-                      {task.recurrence !== "None" && <span className="ml-1">| {task.recurrence}</span>}
-                      {task.subtasks.length > 0 && (
-                        <span className="ml-1">| {task.subtasks.filter(st => st.completed).length}/{task.subtasks.length} subtasks</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {!task.completed && (
-                      <button
-                        className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-all duration-300 active:scale-95"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleCompleteTask(task);
-                        }}
-                      >
-                        Complete
-                      </button>
-                    )}
-                    <button
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-all duration-300 active:scale-95"
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleDeleteTask(task);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
-        {/* Right: Widgets */}
-        <div className="flex flex-col gap-6 w-full lg:w-[350px]">
-          {/* Progress */}
-          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-500">🏅</span>
-              <span className="font-bold">Progress</span>
+          {/* Task List */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">Your Tasks ({incompleteTasks.length})</h2>
+              <select
+                className="border rounded px-3 py-1 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value as Category | "All")}
+              >
+                <option value="All">All Categories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
-            <div className="font-semibold mb-1">Level {getLevel(xp)}</div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-full bg-gray-200 rounded h-3 overflow-hidden">
-                <div
-                  className={clsx(currentTheme.secondary, "h-3 rounded transition-all duration-700")}
-                  style={{ width: `${((xp % 100) / 100) * 100}%` }}
-                />
-              </div>
-              <span className="text-xs">{xp % 100} / 100 XP</span>
-            </div>
-            <div className="text-xs text-gray-500">
-              Keep completing tasks to reach Level {getLevel(xp) + 1}!
-            </div>
-          </div>
-
-          {/* User Statistics */}
-          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
-            <div className="flex items-center gap-2 mb-2">
-              <FaChartBar className="text-blue-500 transition-transform duration-300 hover:scale-110" />
-              <span className="font-bold">Your Stats</span>
-            </div>
-            <ul className="text-sm">
-              <li>Total Tasks Completed: {userStats.totalTasksCompleted}</li>
-              <li>Current Streak: {userStats.currentStreak} days</li>
-              <li>Highest Streak: {userStats.highestStreak} days</li>
-            </ul>
-            <button
-              className="text-violet-600 text-xs underline mt-2 transition-colors duration-300 hover:text-violet-800"
-              onClick={() => setShowStatsModal(true)}
-            >
-              View Full Stats
-            </button>
-          </div>
-
-          {/* Achievements */}
-          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
-            <div className="flex items-center gap-2 mb-2">
-              <FaTrophy className="text-orange-500 transition-transform duration-300 hover:scale-110" />
-              <span className="font-bold">Achievements ({achievements.filter(a => a.unlocked).length}/{achievements.length})</span>
-            </div>
-            <ul className="text-xs mb-2">
-              {achievements.slice(0, 3).map(ach => (
-                <li key={ach.id} className={clsx("flex items-center gap-2", ach.unlocked ? "text-green-700" : "text-gray-500")}>
-                  {ach.icon} {ach.name} {ach.unlocked && <FaCheckCircle className="text-green-500" />}
-                </li>
-              ))}
-              {achievements.filter(a => a.unlocked).length === 0 && (
-                <p className="text-gray-400">No achievements yet!</p>
-              )}
-            </ul>
-            <button
-              className="text-violet-600 text-xs underline transition-colors duration-300 hover:text-violet-800"
-              onClick={() => setShowAchievementsModal(true)}
-            >
-              View All Achievements
-            </button>
-          </div>
-
-          {/* XP History */}
-          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-green-500">⏱️</span>
-              <span className="font-bold">XP History</span>
-            </div>
-            <ul className="text-xs mb-2">
-              {xpHistory.slice(0, 3).map(item => (
-                <li key={item.id} className={item.change > 0 ? "text-green-600" : "text-red-600"}>
-                  <div>
-                    <span className="font-semibold">{item.change > 0 ? "+" : ""}{item.change} XP</span>
-                    <span className="ml-2">{item.description}</span>
-                  </div>
-                  <span className="text-gray-400 block mt-1">{new Date(item.timestamp).toLocaleString()}</span>
-                </li>
-              ))}
-              {xpHistory.length === 0 && <p className="text-gray-400">No XP history yet.</p>}
-            </ul>
-            <button
-              className="text-violet-600 text-xs underline transition-colors duration-300 hover:text-violet-800"
-              onClick={() => setShowXPModal(true)}
-            >
-              View All History
-            </button>
-          </div>
-
-          {/* Rewards */}
-          <div className="bg-white rounded-xl shadow p-4 transition-all duration-700">
-            <div className="flex items-center gap-2 mb-2">
-              <FaGift className="text-violet-500 transition-transform duration-300 hover:scale-110" />
-              <span className="font-bold">Rewards</span>
-            </div>
-            <button
-              className={clsx(
-                currentTheme.secondary,
-                "text-white px-3 py-1 rounded-full text-sm mb-3 hover:opacity-90 transition-all duration-300 active:scale-95 flex items-center gap-1"
-              )}
-              onClick={() => setShowCustomRewardModal(true)}
-            >
-              <FaPlus /> Custom Reward
-            </button>
-            <ul>
-              {allRewards.map(reward => (
-                <li
-                  key={reward.id}
-                  className="flex items-center justify-between bg-gray-50 rounded-lg mb-3 p-3 transition-all duration-300 hover:bg-gray-100"
-                >
-                  <div>
-                    <div className="font-semibold flex items-center gap-2">
-                      <span className="text-2xl">{reward.emoji}</span>
-                      {reward.name}
-                    </div>
-                    <div className="text-xs text-gray-500">{reward.cost} XP</div>
-                  </div>
-                  <button
+            {incompleteTasks.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No tasks to display! Add a new task above.</p>
+            ) : (
+              <ul>
+                {incompleteTasks.map(task => (
+                  <li
+                    key={task.id}
                     className={clsx(
-                      "px-4 py-2 rounded font-semibold text-white transition-all duration-300 active:scale-95",
-                      xp >= reward.cost
-                        ? currentTheme.primary + " hover:opacity-90"
-                        : "bg-gray-400 cursor-not-allowed"
+                      "flex items-center justify-between p-3 mb-2 rounded-lg border-l-4 shadow-sm hover:shadow-md transition-all duration-200",
+                      getPriorityColor(task.priority),
+                      "bg-gray-50"
                     )}
-                    disabled={xp < reward.cost}
-                    onClick={() => handleRedeem(reward)}
                   >
-                    Redeem
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <div className="flex items-center flex-1 mr-4">
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => handleToggleTaskCompletion(task)}
+                        className="form-checkbox h-5 w-5 text-green-600 rounded mr-3"
+                      />
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => setSelectedTask(task)}
+                      >
+                        <span className={clsx("font-medium", task.completed && "line-through text-gray-500")}>
+                          {task.text}
+                        </span>
+                        {task.dueDate && (
+                          <span className="ml-2 text-sm text-gray-500">
+                            (Due: {task.dueDate})
+                          </span>
+                        )}
+                        {task.category && (
+                          <span className="ml-2 text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full">
+                            {task.category}
+                          </span>
+                        )}
+                        {task.recurrence !== "None" && (
+                          <span className="ml-2 text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full">
+                            {task.recurrence}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedTask(task)}
+                        className="text-gray-500 hover:text-violet-600 transition-colors"
+                        aria-label="View task details"
+                      >
+                        <FaEdit />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {completedTasks.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h3 className="text-xl font-bold mb-3 text-gray-800">Completed Tasks ({completedTasks.length})</h3>
+                <ul>
+                  {completedTasks.map(task => (
+                    <li
+                      key={task.id}
+                      className="flex items-center justify-between p-3 mb-2 rounded-lg bg-green-50 border-l-4 border-green-400 text-gray-600 shadow-sm"
+                    >
+                      <div className="flex items-center flex-1 mr-4">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => handleToggleTaskCompletion(task)}
+                          className="form-checkbox h-5 w-5 text-green-600 rounded mr-3"
+                        />
+                        <span className="line-through flex-1">{task.text}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedTask(task)}
+                          className="text-gray-500 hover:text-violet-600 transition-colors"
+                          aria-label="View task details"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          aria-label="Delete task"
+                        >
+                          <AiOutlineClose />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Task Detail Modal */}
-      {selectedTask && ( // Conditionally render based on selectedTask existence
+      {/* Modals */}
+      {selectedTask && (
         <TaskModal
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
-          onSave={handleEditTask}
-          onComplete={handleCompleteTask}
+          onSave={handleUpdateTask}
+          onComplete={handleToggleTaskCompletion}
           onDelete={handleDeleteTask}
         />
       )}
 
-      {/* XP History Modal */}
-      <Modal onClose={() => setShowXPModal(false)} isOpen={showXPModal}>
-        <div className="max-w-lg mx-auto">
-          <h2 className="text-xl font-bold mb-4">XP History</h2>
-          <button
-            className="bg-red-500 text-white px-3 py-1 rounded mb-4 transition-all duration-300 active:scale-95 hover:bg-red-600"
-            onClick={handleDeleteXPHistory}
-          >
-            Delete All History
-          </button>
-          <ul className="max-h-96 overflow-y-auto">
-            {xpHistory.length === 0 ? (
-              <p className="text-gray-400">No XP history yet.</p>
-            ) : (
-              xpHistory.map(item => (
-                <li
-                  key={item.id}
-                  className={clsx(
-                    "mb-2 p-2 rounded transition-all duration-300",
-                    item.change > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                  )}
-                >
-                  <div>
-                    <span className="font-semibold">{item.change > 0 ? "+" : ""}{item.change} XP</span>
-                    <span className="ml-2">{item.description}</span>
-                  </div>
-                  <span className="text-gray-500 text-sm">{new Date(item.timestamp).toLocaleString()}</span>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-      </Modal>
-
-      {/* Stats Modal */}
-      <Modal onClose={() => setShowStatsModal(false)} isOpen={showStatsModal}>
-        <div className="max-w-md mx-auto">
-          <h2 className="text-xl font-bold mb-4">Your Statistics</h2>
-          <ul className="text-lg space-y-2">
-            <li> Total Tasks Completed: {userStats.totalTasksCompleted}</li>
-            <li> Current Streak: {userStats.currentStreak} days</li>
-            <li> Highest Streak: {userStats.highestStreak} days</li>
-            <li> Total XP Earned: {xp}</li>
-            {/* Could add more stats here, e.g., tasks by priority, tasks by category */}
-          </ul>
-        </div>
-      </Modal>
-
-      {/* Achievements Modal */}
-      <Modal onClose={() => setShowAchievementsModal(false)} isOpen={showAchievementsModal}>
-        <div className="max-w-md mx-auto">
-          <h2 className="text-xl font-bold mb-4">Your Achievements</h2>
-          <ul className="space-y-3">
-            {achievements.map(ach => (
-              <li
-                key={ach.id}
-                className={clsx(
-                  "p-3 rounded-lg flex items-center",
-                  ach.unlocked ? "bg-green-50 text-green-800 border-l-4 border-green-400" : "bg-gray-50 text-gray-600 border-l-4 border-gray-300"
-                )}
-              >
-                <span className="text-3xl mr-4">{ach.icon}</span>
-                <div>
-                  <h3 className="font-bold">{ach.name} {ach.unlocked && <FaCheckCircle className="inline ml-1 text-green-500" />}</h3>
-                  <p className="text-sm">{ach.description}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Modal>
-
-      {/* Custom Reward Modal */}
-      <CustomRewardModal
-        onClose={() => setShowCustomRewardModal(false)}
-        onSave={handleAddCustomReward}
-        isOpen={showCustomRewardModal}
-      />
-
-      {/* Info/Success/Error Modal */}
-      {showMsg && (
-        <Modal onClose={() => setShowMsg(null)} isOpen={!!showMsg}>
-          <div className="p-4">
-            <div
-              className={clsx(
-                "font-bold mb-2 transition-colors duration-300",
-                showMsg.type === "success" ? "text-green-600" : "text-red-600"
-              )}
-            >
-              {showMsg.type === "success" ? "Success" : "Error"}
+      {showXPModal && (
+        <Modal onClose={() => setShowXPModal(false)} isOpen={true}>
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Your Rewards & XP History</h2>
+            <div className="mb-6">
+              <p className="text-xl font-semibold">Current XP: {xp}</p>
+              <p className="text-lg text-violet-600">Level: {getLevel(xp)}</p>
             </div>
-            <div>{showMsg.msg}</div>
+
+            <div className="flex justify-between items-center mb-4 border-t pt-4">
+              <h3 className="text-xl font-semibold">Available Rewards</h3>
+              <button
+                onClick={() => setShowCustomRewardModal(true)}
+                className="bg-violet-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-violet-700 transition-colors"
+              >
+                + Custom Reward
+              </button>
+            </div>
+            {totalRewards.length === 0 ? (
+              <p className="text-gray-500 text-sm mb-4">No rewards available yet. Create one!</p>
+            ) : (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                {totalRewards.map(reward => (
+                  <li key={reward.id} className="bg-gray-100 p-3 rounded-lg flex items-center justify-between shadow-sm">
+                    <div className="flex items-center">
+                      <span className="text-2xl mr-2">{reward.emoji}</span>
+                      <div>
+                        <p className="font-semibold">{reward.name}</p>
+                        <p className="text-sm text-gray-600">{reward.cost} XP</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRedeemReward(reward)}
+                        className={clsx(
+                          "bg-green-500 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-green-600 disabled:opacity-50",
+                          xp < reward.cost && "cursor-not-allowed"
+                        )}
+                        disabled={xp < reward.cost}
+                      >
+                        Redeem
+                      </button>
+                      {reward.custom && (
+                        <button
+                          onClick={() => handleDeleteReward(reward.id)}
+                          className="text-red-400 hover:text-red-600 text-sm"
+                          aria-label="Delete custom reward"
+                        >
+                          <AiOutlineClose />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <h3 className="text-xl font-semibold mb-3 border-t pt-4">XP History</h3>
+            {xpHistory.length === 0 ? (
+              <p className="text-gray-500 text-sm">No XP history yet. Complete some tasks!</p>
+            ) : (
+              <ul className="max-h-60 overflow-y-auto">
+                {xpHistory.map(item => (
+                  <li key={item.id} className="flex justify-between items-center text-sm mb-1 pb-1 border-b border-gray-100 last:border-b-0">
+                    <span className={clsx(item.change > 0 ? "text-green-600" : "text-red-600", "font-medium")}>
+                      {item.change > 0 ? `+${item.change}` : item.change} XP
+                    </span>
+                    <span className="flex-1 ml-2">{item.description}</span>
+                    <span className="text-gray-500 text-xs">
+                      {new Date(item.timestamp).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {showCustomRewardModal && (
+        <CustomRewardModal
+          onClose={() => setShowCustomRewardModal(false)}
+          onSave={handleAddCustomReward}
+          isOpen={true}
+        />
+      )}
+
+      {showStatsModal && (
+        <Modal onClose={() => setShowStatsModal(false)} isOpen={true}>
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Your Stats</h2>
+            <div className="space-y-3 text-lg">
+              <p><span className="font-semibold">Total Tasks Completed:</span> {userStats.totalTasksCompleted}</p>
+              <p><span className="font-semibold">Current Streak:</span> {userStats.currentStreak} days</p>
+              <p><span className="font-semibold">Highest Streak:</span> {userStats.highestStreak} days</p>
+              <p><span className="font-semibold">Last Streak Check:</span> {userStats.lastStreakCheckDate || "Never"}</p>
+            </div>
+            <p className="text-sm text-gray-500 mt-4">Streaks are updated once daily when you complete a task.</p>
+          </div>
+        </Modal>
+      )}
+
+      {showAchievementsModal && (
+        <Modal onClose={() => setShowAchievementsModal(false)} isOpen={true}>
+          <div className="max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4">Your Achievements</h2>
+            {achievements.length === 0 ? (
+              <p className="text-gray-500 text-sm">No achievements defined.</p>
+            ) : (
+              <ul className="space-y-3">
+                {achievements.map(ach => (
+                  <li key={ach.id} className={clsx("p-4 rounded-lg shadow-sm flex items-center",
+                    ach.unlocked ? "bg-emerald-50 border-l-4 border-emerald-400" : "bg-gray-50 border-l-4 border-gray-300"
+                  )}>
+                    <span className="text-3xl mr-3">{ach.icon}</span>
+                    <div>
+                      <h3 className="font-semibold text-lg flex items-center">
+                        {ach.name}
+                        {ach.unlocked && <FaCheckCircle className="text-emerald-500 ml-2 text-xl" />}
+                      </h3>
+                      <p className="text-sm text-gray-700">{ach.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </Modal>
       )}
